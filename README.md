@@ -28,17 +28,19 @@ float distanciaEntrada = 0;
 float distanciaInterior = 0;
 float nivelGas = 0;
 
-const float UMBRAL_ENTRADA = 20.0;   // ⬅️ Nuevo umbral de 20 cm
+const float UMBRAL_ENTRADA = 20.0;   // cm
 const float UMBRAL_INTERIOR = 15.0;  // cm
+const int GAS_UMBRAL = 60;           // % de gas para activar alarma
 
-int pasos = 200;     
-int delayPaso = 5;   
+int pasos = 200;
+int delayPaso = 5;
 bool puertaAbierta = false;
 bool entradaDetectada = false;
 
 void setup() {
   Serial.begin(9600);
 
+  // Inicializar OLED
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
     Serial.println("Error al iniciar pantalla OLED");
     while (true);
@@ -53,7 +55,7 @@ void setup() {
   pinMode(AIN2, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
 
-  // Asegurar estado inicial del TRIG interior
+  // Estado inicial
   digitalWrite(TRIG_INTERIOR, LOW);
 
   display.clearDisplay();
@@ -74,6 +76,11 @@ void loop() {
 
   bool entradaActiva = (distanciaEntrada > 0 && distanciaEntrada <= UMBRAL_ENTRADA);
   bool interiorActivo = (distanciaInterior > 0 && distanciaInterior <= UMBRAL_INTERIOR);
+
+  // --- DETECCIÓN DE GAS (ALARMA) ---
+  if (nivelGas > GAS_UMBRAL) {
+    activarAlarmaGas();
+  }
 
   // --- ABRIR PUERTA (solo si no hay detección interior) ---
   if (entradaActiva && !interiorActivo && !puertaAbierta) {
@@ -112,7 +119,7 @@ float medirDistancia3Pin(int pin) {
   delayMicroseconds(10);
   digitalWrite(pin, LOW);
   pinMode(pin, INPUT);
-  long duracion = pulseIn(pin, HIGH, 40000); // tiempo máximo de eco
+  long duracion = pulseIn(pin, HIGH, 40000);
   if (duracion == 0) return 999;
   return duracion * 0.034 / 2;
 }
@@ -168,6 +175,27 @@ void cerrarPuerta() {
 void detenerMotor() {
   digitalWrite(AIN1, LOW);
   digitalWrite(AIN2, LOW);
+}
+
+// --- ALARMA DE GAS ---
+void activarAlarmaGas() {
+  Serial.println("⚠️ ALERTA: Nivel de gas alto ⚠️");
+  for (int i = 0; i < 3; i++) {
+    tone(BUZZER_PIN, 1500);
+    delay(300);
+    noTone(BUZZER_PIN);
+    delay(200);
+  }
+  // Muestra en OLED la alerta
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(10, 25);
+  display.println("ALERTA: Gas alto!");
+  display.setTextSize(2);
+  display.setCursor(20, 40);
+  display.print(nivelGas, 0);
+  display.println("%");
+  display.display();
 }
 
 // --- OLED ---
