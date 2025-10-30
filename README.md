@@ -28,18 +28,17 @@ float distanciaEntrada = 0;
 float distanciaInterior = 0;
 float nivelGas = 0;
 
-const float UMBRAL_ENTRADA = 10.0;   // cm
+const float UMBRAL_ENTRADA = 20.0;   // ⬅️ Nuevo umbral de 20 cm
 const float UMBRAL_INTERIOR = 15.0;  // cm
 
-int pasos = 200;     // Giro 360° (ajusta según tu motor)
-int delayPaso = 5;   // Velocidad
+int pasos = 200;     
+int delayPaso = 5;   
 bool puertaAbierta = false;
 bool entradaDetectada = false;
 
 void setup() {
   Serial.begin(9600);
 
-  // Inicializar OLED
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
     Serial.println("Error al iniciar pantalla OLED");
     while (true);
@@ -53,6 +52,9 @@ void setup() {
   pinMode(AIN1, OUTPUT);
   pinMode(AIN2, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
+
+  // Asegurar estado inicial del TRIG interior
+  digitalWrite(TRIG_INTERIOR, LOW);
 
   display.clearDisplay();
   display.setTextSize(1);
@@ -88,6 +90,16 @@ void loop() {
   }
 
   mostrarOLED(entradaActiva, interiorActivo);
+
+  // --- Depuración Serial ---
+  Serial.print("Entrada: ");
+  Serial.print(distanciaEntrada);
+  Serial.print(" cm | Interior: ");
+  Serial.print(distanciaInterior);
+  Serial.print(" cm | Gas: ");
+  Serial.print(nivelGas);
+  Serial.println("%");
+
   delay(600);
 }
 
@@ -100,8 +112,8 @@ float medirDistancia3Pin(int pin) {
   delayMicroseconds(10);
   digitalWrite(pin, LOW);
   pinMode(pin, INPUT);
-  long duracion = pulseIn(pin, HIGH, 25000);
-  if (duracion == 0) return 0;
+  long duracion = pulseIn(pin, HIGH, 40000); // tiempo máximo de eco
+  if (duracion == 0) return 999;
   return duracion * 0.034 / 2;
 }
 
@@ -111,8 +123,8 @@ float medirDistancia4Pin(int trigPin, int echoPin) {
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-  long duracion = pulseIn(echoPin, HIGH, 25000);
-  if (duracion == 0) return 0;
+  long duracion = pulseIn(echoPin, HIGH, 40000);
+  if (duracion == 0) return 999;
   return duracion * 0.034 / 2;
 }
 
